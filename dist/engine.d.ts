@@ -1,4 +1,4 @@
-import type { AgentMessage } from "@mariozechner/pi-agent-core";
+import type { AgentMessage } from './types.js';
 export interface ContextEngineInfo {
     id: string;
     name: string;
@@ -32,7 +32,7 @@ export interface BootstrapResult {
 }
 export declare class GraphitiContextEngine {
     readonly info: ContextEngineInfo;
-    bootstrap(params: {
+    bootstrap(_params: {
         sessionId: string;
         sessionFile: string;
     }): Promise<BootstrapResult>;
@@ -41,6 +41,7 @@ export declare class GraphitiContextEngine {
         message: AgentMessage;
         isHeartbeat?: boolean;
     }): Promise<IngestResult>;
+    private extractMessageId;
     afterTurn(params: {
         sessionId: string;
         sessionFile: string;
@@ -50,6 +51,9 @@ export declare class GraphitiContextEngine {
         isHeartbeat?: boolean;
         tokenBudget?: number;
     }): Promise<void>;
+    private extractTextContent;
+    private getGroupIdForSession;
+    private processQueuedMessages;
     assemble(params: {
         sessionId: string;
         messages: AgentMessage[];
@@ -61,8 +65,9 @@ export declare class GraphitiContextEngine {
         tokenBudget?: number;
         force?: boolean;
         currentTokenCount?: number;
-        compactionTarget?: "budget" | "threshold";
+        compactionTarget?: 'budget' | 'threshold';
         customInstructions?: string;
+        legacyParams?: Record<string, unknown>;
     }): Promise<CompactResult>;
 }
 //# sourceMappingURL=engine.d.ts.map

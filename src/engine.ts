@@ -5,7 +5,8 @@ import { messageQueue } from './queue.js';
 import crypto from 'node:crypto';
 
 import { extractClaims, buildClaimsForIngestion } from './extractor.js';
-import { ingestClaims, searchClaims, markSessionClaimsArchived } from './graphiti-client.js';
+import { ingestClaims as rawIngestClaims, ingestClaimsWithRetry, searchClaimsWithFallback as searchClaims, markSessionClaimsArchived } from './graphiti-client.js';
+import { retryQueue } from './retry-queue.js';
 import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
 
 export interface ContextEngineInfo {
@@ -103,6 +104,14 @@ export class GraphitiContextEngine {
     const { sessionId, isHeartbeat } = params;
 
     if (isHeartbeat) return;
+    
+    // Process retries first
+    try {
+      await retryQueue.processRetries((claims, groupId) => rawIngestClaims(claims, groupId));
+    } catch (error) {
+      console.error('Failed to process retry queue:', error);
+    }
+    
     await this.processQueuedMessages(sessionId);
   }
 
@@ -142,7 +151,7 @@ export class GraphitiContextEngine {
         const claims = buildClaimsForIngestion(extraction, item.sessionId, item.messageId);
         const groupId = this.getGroupIdForSession(sessionId);
         
-        await ingestClaims(claims, groupId);
+        await ingestClaimsWithRetry(claims, groupId);
       } catch (error) {
         console.error(`Claim extraction failed for ${item.messageId}:`, error);
       }

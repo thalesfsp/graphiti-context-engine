@@ -68,3 +68,41 @@ export async function markSessionClaimsArchived(sessionId: string): Promise<void
   // A bulk endpoint would be needed: POST /claims/archive-session
   console.log(`Would mark claims for session ${sessionId} as archived`);
 }
+
+import { graphitiCircuit } from './circuit-breaker.js';
+import { retryQueue } from './retry-queue.js';
+
+export async function ingestClaimsWithRetry(claims: Claim[], groupId: string): Promise<{ ingested: number; duplicates: number }> {
+  const cbResult = await graphitiCircuit.call(
+    () => ingestClaims(claims, groupId),
+    { ingested: 0, duplicates: 0 }
+  );
+  if (!cbResult.succeeded) {
+    retryQueue.add(claims, groupId);
+  }
+  return cbResult.result;
+}
+
+export async function searchClaimsWithFallback(query: string, groupId: string, options?: any): Promise<Claim[]> {
+  const cbResult = await graphitiCircuit.call(
+    () => searchClaims(query, groupId, options),
+    []
+  );
+  return cbResult.result;
+}
+
+export async function checkHealth(): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 1000);
+    
+    const response = await fetch(`${GRAPHITI_URL}/health`, {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    return response.ok && graphitiCircuit.isHealthy();
+  } catch {
+    return false;
+  }
+}
