@@ -23,15 +23,33 @@ export function getSubagentScope(subagentId: string): SubagentScope | undefined 
 }
 
 export function getGroupIdForSession(sessionId: string, subagentId?: string): string {
+  // If explicit subagentId provided, use it
   if (subagentId) {
     const scope = activeScopes.get(subagentId);
     if (scope) return scope.groupId;
-    const parts = sessionId.split(':');
-    return `${parts[2] || 'default'}:${subagentId}`;
+    return `${sessionId}:${subagentId}`;
   }
-  // Use session-based grouping for main agent (match current engine logic)
+  
+  // Auto-detect subagent from sessionId pattern: "...:subagent:UUID"
+  if (isSubagentSession(sessionId)) {
+    const parts = sessionId.split(':subagent:');
+    if (parts.length === 2) {
+      const parentPart = parts[0];  // e.g., "agent:main" or "agent:worker-grok"
+      const subagentUuid = parts[1]!; // The UUID
+      
+      // Check if we have an active scope for this subagent
+      const scope = activeScopes.get(subagentUuid);
+      if (scope) return scope.groupId;
+      
+      // Fallback: construct isolated groupId from session pattern
+      return `${parentPart}:${subagentUuid}`;
+    }
+  }
+  
+  // Main agent: use first meaningful part
   const parts = sessionId.split(':');
-  return parts[2] || 'default';
+  // For "agent:main" -> "main", for "discord:123" -> "discord"
+  return parts[1] || parts[0] || 'default';
 }
 
 export async function completeSubagentScope(

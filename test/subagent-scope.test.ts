@@ -30,3 +30,14 @@ describe('Subagent Scoped Graphs', () => {
     expect(summary?.status).toBeUndefined(); // Not in SubagentSummary
   });
 });
+
+  it('should auto-detect subagent from sessionId pattern', () => {
+    // No explicit subagentId, but sessionId contains :subagent:
+    const groupId = getGroupIdForSession('agent:worker-grok:subagent:abc123-def456');
+    expect(groupId).toBe('agent:worker-grok:abc123-def456');
+  });
+
+  it('should return main groupId for non-subagent sessions', () => {
+    const groupId = getGroupIdForSession('agent:main');
+    expect(groupId).toBe('main');
+  });
