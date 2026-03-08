@@ -13,3 +13,10 @@ export interface Claim {
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
 }
+
+// Minimal AgentMessage stub for typing
+export interface AgentMessage {
+  role: 'user' | 'assistant' | 'system' | 'tool';
+  content: string | unknown[];
+  // Add other fields as needed
+}

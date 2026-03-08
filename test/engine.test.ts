@@ -7,10 +7,12 @@ describe('GraphitiContextEngine', () => {
     expect(engine.info.id).toBe('graphiti-context-engine');
   });
 
-  it('ingest returns ingested true', async () => {
+  it('ingest() should return quickly without blocking', async () => {
     const engine = new GraphitiContextEngine();
-    const result = await engine.ingest({ sessionId: 'test', message: {} as any });
-    expect(result.ingested).toBe(true);
+    const start = Date.now();
+    await engine.ingest({ sessionId: 'test', message: { role: 'user', content: 'hello' } });
+    const elapsed = Date.now() - start;
+    expect(elapsed).toBeLessThan(10); // Must be <10ms
   });
 
   it('assemble returns empty messages', async () => {

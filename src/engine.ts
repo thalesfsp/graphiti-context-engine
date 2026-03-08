@@ -1,5 +1,9 @@
 // import type { AgentMessage } from "@mariozechner/pi-agent-core";
 
+import type { AgentMessage } from './types.js';
+import { messageQueue } from './queue.js';
+import crypto from 'node:crypto';
+
 export interface ContextEngineInfo {
   id: string;
   name: string;
@@ -7,7 +11,7 @@ export interface ContextEngineInfo {
   ownsCompaction?: boolean;
 }
 
-type AgentMessage = Record<string, unknown>;\n\nexport interface AssembleResult {
+export interface AssembleResult {
   messages: AgentMessage[];
   estimatedTokens: number;
   systemPromptAddition?: string;
@@ -52,8 +56,34 @@ export class GraphitiContextEngine {
     message: AgentMessage;
     isHeartbeat?: boolean;
   }): Promise<IngestResult> {
-    // Stub: always ingest
+    const { sessionId, message, isHeartbeat } = params;
+    
+    // Extract message ID (from message metadata or generate)
+    const messageId = this.extractMessageId(message);
+    
+    // Queue for background processing (no LLM, no HTTP)
+    messageQueue.enqueue({
+      sessionId,
+      messageId,
+      message,
+      timestamp: new Date().toISOString(),
+      isHeartbeat: isHeartbeat ?? false,
+    });
+    
+    // Return immediately
     return { ingested: true };
+  }
+
+  private extractMessageId(message: AgentMessage): string {
+    // Try to extract from message content/metadata
+    // Fallback to hash of content
+    if (typeof message.content === 'string') {
+      return crypto.createHash('sha256')
+        .update(message.content)
+        .digest('hex')
+        .slice(0, 16);
+    }
+    return crypto.randomUUID();
   }
 
   async afterTurn(params: {
