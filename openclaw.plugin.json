@@ -1,0 +1,7 @@
+{
+  "id": "graphiti-context-engine",
+  "name": "Graphiti Context Engine",
+  "kind": "context-engine",
+  "version": "0.1.0",
+  "configSchema": {}
+}
