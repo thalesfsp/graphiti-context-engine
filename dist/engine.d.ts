@@ -1,4 +1,5 @@
 import type { AgentMessage } from './types.js';
+import type { EngineMetrics } from './metrics.js';
 export interface ContextEngineInfo {
     id: string;
     name: string;
@@ -69,6 +70,16 @@ export declare class GraphitiContextEngine {
         customInstructions?: string;
         legacyParams?: Record<string, unknown>;
     }): Promise<CompactResult>;
+    getStats(): Promise<{
+        metrics: EngineMetrics;
+        latency: {
+            p50: number;
+            p95: number;
+            p99: number;
+        };
+        graphiti_healthy: boolean;
+        circuit_breaker_healthy: boolean;
+    }>;
     onSubagentComplete(params: {
         subagentId: string;
         parentSessionId: string;

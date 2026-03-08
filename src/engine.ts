@@ -10,6 +10,11 @@ import { retryQueue } from './retry-queue.js';
 import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
 import { completeSubagentScope, getGroupIdForSession } from './subagent-scope.js';
 
+import type { EngineMetrics } from './metrics.js';
+import { recordIngest, recordExtraction, recordSearch, recordError, getMetrics, getSearchLatencyPercentiles } from './metrics.js';
+import { checkHealth } from './graphiti-client.js';
+import { graphitiCircuit } from './circuit-breaker.js';
+
 export interface ContextEngineInfo {
   id: string;
   name: string;
@@ -77,6 +82,8 @@ export class GraphitiContextEngine {
       isHeartbeat: isHeartbeat ?? false,
     });
     
+    recordIngest();
+    
     // Return immediately
     return { ingested: true };
   }
@@ -110,6 +117,7 @@ export class GraphitiContextEngine {
     try {
       await retryQueue.processRetries((claims, groupId) => rawIngestClaims(claims, groupId));
     } catch (error) {
+      recordError(`Retry queue process failed: ${error instanceof Error ? error.message : String(error)}`);
       console.error('Failed to process retry queue:', error);
     }
     
@@ -146,11 +154,14 @@ export class GraphitiContextEngine {
         const extraction = await extractClaims(text, item.sessionId, item.messageId);
         if (extraction.claims.length === 0) continue;
 
+        recordExtraction(extraction.claims.length);
+
         const claims = buildClaimsForIngestion(extraction, item.sessionId, item.messageId);
         const groupId = this.getGroupIdForSession(sessionId);
         
         await ingestClaimsWithRetry(claims, groupId);
       } catch (error) {
+        recordError(`Claim extraction failed for ${item.messageId}: ${error instanceof Error ? error.message : String(error)}`);
         console.error(`Claim extraction failed for ${item.messageId}:`, error);
       }
     }
@@ -176,15 +187,18 @@ export class GraphitiContextEngine {
       const groupId = this.getGroupIdForSession(sessionId);
       
       // Search Graphiti (with 1s timeout)
+      const start = Date.now();
       const claims = await searchClaims(query, groupId, {
         statuses: ['active'],
         limit: 20,
       });
+      recordSearch(Date.now() - start);
       
       // Build context addition
       systemPromptAddition = buildContextAddition(claims);
       
     } catch (error) {
+      recordError(error instanceof Error ? error.message : String(error));
       // Graceful degradation - just return messages without graph context
       console.warn('assemble() failed to retrieve claims:', error);
     }
@@ -232,6 +246,20 @@ export class GraphitiContextEngine {
       ok: true,
       compacted: false, // We don't own compaction, legacy does
       reason: 'Claims extracted; delegating to legacy compaction',
+    };
+  }
+
+  async getStats(): Promise<{
+    metrics: EngineMetrics;
+    latency: { p50: number; p95: number; p99: number };
+    graphiti_healthy: boolean;
+    circuit_breaker_healthy: boolean;
+  }> {
+    return {
+      metrics: getMetrics(),
+      latency: getSearchLatencyPercentiles(),
+      graphiti_healthy: await checkHealth(),
+      circuit_breaker_healthy: graphitiCircuit.isHealthy(),
     };
   }
 

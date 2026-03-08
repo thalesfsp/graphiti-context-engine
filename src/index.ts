@@ -22,3 +22,5 @@ export {
 
 export { detectContradictions, resolveContradiction } from './contradiction.js';
 
+export * from './metrics.js';
+
