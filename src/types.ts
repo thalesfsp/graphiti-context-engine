@@ -63,3 +63,13 @@ export interface SubagentSummary {
   startedAt: string;
   completedAt: string;
 }
+
+export interface Contradiction {
+  claim_a_id: string;
+  claim_b_id: string;
+  conflict_type: 'direct' | 'temporal' | 'supersession';
+  confidence: number;
+  detected_at: string;
+  resolution?: 'claim_a_wins' | 'claim_b_wins' | 'merge' | 'unresolved';
+}
+

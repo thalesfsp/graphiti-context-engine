@@ -10,4 +10,5 @@ export { ingestClaims, ingestClaimsWithRetry, searchClaims, searchClaimsWithFall
 export { graphitiCircuit } from './circuit-breaker.js';
 export { retryQueue } from './retry-queue.js';
 export { createSubagentScope, getSubagentScope, getGroupIdForSession, completeSubagentScope, isSubagentSession, } from './subagent-scope.js';
+export { detectContradictions, resolveContradiction } from './contradiction.js';
 //# sourceMappingURL=index.d.ts.map

@@ -19,3 +19,6 @@ export {
   completeSubagentScope,
   isSubagentSession,
 } from './subagent-scope.js';
+
+export { detectContradictions, resolveContradiction } from './contradiction.js';
+
