@@ -1,4 +1,5 @@
 export { GraphitiContextEngine } from './engine.js';
+export { detectTrustTier, getTrustWeight, compareTrust } from './trust.js';
 export { messageQueue } from './queue.js';
 export { extractClaims, buildClaimsForIngestion } from './extractor.js';
 export { buildContextAddition, extractQueryFromMessages } from './context-builder.js';

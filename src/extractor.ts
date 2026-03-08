@@ -1,4 +1,5 @@
-import { Claim, PartialClaim } from './types.js';
+import { Claim, PartialClaim, AgentMessage } from './types.js';
+import { detectTrustTier } from './trust.js';
 
 const EXTRACTOR_VERSION = 'v1.0';
 
@@ -39,9 +40,11 @@ export function buildClaimsForIngestion(
   extractionResult: ExtractionResult,
   sessionId: string,
   messageId: string,
-  authorId?: string
+  authorId?: string,
+  message?: AgentMessage  // Add message param
 ): Claim[] {
   const now = new Date().toISOString();
+  const trustTier = message ? detectTrustTier(message) : 'user_statement';
   
   return extractionResult.claims.map((c, i) => ({
     claim_id: `${sessionId}-${messageId}-${i}`,
@@ -57,5 +60,6 @@ export function buildClaimsForIngestion(
     extractor_version: EXTRACTOR_VERSION,
     created_at: now,
     updated_at: now,
+    trust_tier: trustTier,
   }));
 }

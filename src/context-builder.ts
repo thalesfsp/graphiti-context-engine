@@ -1,13 +1,24 @@
 import { Claim, AgentMessage } from './types.js';
+import { getTrustWeight } from './trust.js';
 
 const MAX_CONTEXT_CHARS = 2000; // ~500 tokens max for injected claims
 
 export function buildContextAddition(claims: Claim[]): string {
   if (claims.length === 0) return '';
   
-  // Sort by confidence (highest first), then recency
-  const sorted = [...claims].sort((a, b) => {
-    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+  // Sort by confidence (highest first), then trust, then recency
+  const sorted = claims.sort((a, b) => {
+    // Primary: confidence (already exists)
+    const confDiff = b.confidence - a.confidence;
+    if (Math.abs(confDiff) > 0.1) return confDiff;
+    
+    // Secondary: trust tier
+    const trustA = getTrustWeight(a.trust_tier || 'user_statement');
+    const trustB = getTrustWeight(b.trust_tier || 'user_statement');
+    const trustDiff = trustB - trustA;
+    if (Math.abs(trustDiff) > 0.1) return trustDiff;
+    
+    // Tertiary: recency (already exists)
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
   

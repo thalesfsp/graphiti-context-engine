@@ -1,3 +1,12 @@
+export type TrustTier = 'system' | 'tool_output' | 'user_statement' | 'speculation';
+
+export const TRUST_WEIGHTS: Record<TrustTier, number> = {
+  system: 1.0,
+  tool_output: 0.9,
+  user_statement: 0.7,
+  speculation: 0.3,
+};
+
 export type ClaimStatus = 'active' | 'superseded' | 'archived' | 'retracted';
 
 export interface ClaimUpdate {
@@ -27,6 +36,8 @@ export interface Claim {
   extractor_version: string; // e.g., "v1.0"
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+  trust_tier?: TrustTier;
+
 }
 
 // Minimal AgentMessage stub for typing
