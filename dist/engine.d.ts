@@ -3,8 +3,16 @@ import type { EngineMetrics } from './metrics.js';
 export interface ContextEngineInfo {
     id: string;
     name: string;
-    version?: string;
-    ownsCompaction?: boolean;
+    version: string;
+    description: string;
+    ownsCompaction: boolean;
+    capabilities: {
+        claimExtraction: boolean;
+        trustTiers: boolean;
+        contradictionDetection: boolean;
+        subagentScoping: boolean;
+        metrics: boolean;
+    };
 }
 export interface AssembleResult {
     messages: AgentMessage[];
@@ -85,5 +93,10 @@ export declare class GraphitiContextEngine {
         parentSessionId: string;
         summary?: string;
     }): Promise<void>;
+    getVersion(): {
+        version: string;
+        commit?: string;
+        buildDate?: string;
+    };
 }
 //# sourceMappingURL=engine.d.ts.map

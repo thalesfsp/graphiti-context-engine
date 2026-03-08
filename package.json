@@ -1,7 +1,7 @@
 {
   "name": "@thalesfsp/graphiti-context-engine",
-  "version": "0.1.0",
-  "description": "OpenClaw Context Engine plugin for Graphiti Knowledge Graph Memory",
+  "version": "1.0.0",
+  "description": "OpenClaw Context Engine plugin for Graphiti knowledge graph integration",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

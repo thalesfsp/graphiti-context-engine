@@ -18,8 +18,16 @@ import { graphitiCircuit } from './circuit-breaker.js';
 export interface ContextEngineInfo {
   id: string;
   name: string;
-  version?: string;
-  ownsCompaction?: boolean;
+  version: string;
+  description: string;
+  ownsCompaction: boolean;
+  capabilities: {
+    claimExtraction: boolean;
+    trustTiers: boolean;
+    contradictionDetection: boolean;
+    subagentScoping: boolean;
+    metrics: boolean;
+  };
 }
 
 export interface AssembleResult {
@@ -53,11 +61,19 @@ export interface BootstrapResult {
 
 export class GraphitiContextEngine {
   readonly info: ContextEngineInfo = {
-    id: "graphiti-context-engine",
-    name: "Graphiti Context Engine",
-    version: "0.1.0",
-    ownsCompaction: false, // Let legacy handle actual compaction
-  };
+  id: 'graphiti-context-engine',
+  name: 'Graphiti Context Engine',
+  version: '1.0.0',
+  description: 'Persistent knowledge graph memory using Graphiti + Neo4j',
+  ownsCompaction: false,
+  capabilities: {
+    claimExtraction: true,
+    trustTiers: true,
+    contradictionDetection: true,
+    subagentScoping: true,
+    metrics: true,
+  },
+};
 
   async bootstrap(_params: { sessionId: string; sessionFile: string }): Promise<BootstrapResult> {
     return { bootstrapped: false };
@@ -296,5 +312,12 @@ export class GraphitiContextEngine {
     // Ingest summary into parent's group
     const parentGroupId = getGroupIdForSession(parentSessionId);
     await ingestClaimsWithRetry([summaryClaim], parentGroupId);
+  }
+
+  getVersion(): { version: string; commit?: string; buildDate?: string } {
+    return {
+      version: this.info.version,
+      buildDate: new Date().toISOString().split('T')[0],
+    };
   }
 }

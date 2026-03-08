@@ -11,10 +11,18 @@ import { checkHealth } from './graphiti-client.js';
 import { graphitiCircuit } from './circuit-breaker.js';
 export class GraphitiContextEngine {
     info = {
-        id: "graphiti-context-engine",
-        name: "Graphiti Context Engine",
-        version: "0.1.0",
-        ownsCompaction: false, // Let legacy handle actual compaction
+        id: 'graphiti-context-engine',
+        name: 'Graphiti Context Engine',
+        version: '1.0.0',
+        description: 'Persistent knowledge graph memory using Graphiti + Neo4j',
+        ownsCompaction: false,
+        capabilities: {
+            claimExtraction: true,
+            trustTiers: true,
+            contradictionDetection: true,
+            subagentScoping: true,
+            metrics: true,
+        },
     };
     async bootstrap(_params) {
         return { bootstrapped: false };
@@ -192,6 +200,12 @@ export class GraphitiContextEngine {
         // Ingest summary into parent's group
         const parentGroupId = getGroupIdForSession(parentSessionId);
         await ingestClaimsWithRetry([summaryClaim], parentGroupId);
+    }
+    getVersion() {
+        return {
+            version: this.info.version,
+            buildDate: new Date().toISOString().split('T')[0],
+        };
     }
 }
 //# sourceMappingURL=engine.js.map
