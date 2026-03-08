@@ -1,16 +1,22 @@
-import { Claim } from './types.js';
+import { Claim, PartialClaim } from './types.js';
 
 const EXTRACTOR_VERSION = 'v1.0';
 
-export interface PartialClaim {
-  subject: string;
-  predicate: string;
-  object: string;
-  confidence: number;
-}
-
 export interface ExtractionResult {
   claims: PartialClaim[];
+}
+
+export interface SupersessionResult {
+  supersedes: string[];  // claim_ids this new claim supersedes
+}
+
+// Stub for now
+export async function detectSupersession(
+  _newClaim: PartialClaim,
+  _existingClaims: Claim[]
+): Promise<SupersessionResult> {
+  // TODO: LLM-based contradiction detection
+  return { supersedes: [] };
 }
 
 export async function extractClaims(
@@ -22,7 +28,6 @@ export async function extractClaims(
   // For now, use a simple prompt-based extraction
   // In production, this would call OpenClaw's LLM
   
-
 
   // TODO: Actually call LLM here
   // TODO: Actually call LLM here

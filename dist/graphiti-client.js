@@ -1,5 +1,24 @@
 const GRAPHITI_URL = process.env.GRAPHITI_URL || 'http://localhost:8721';
 const TIMEOUT_MS = 5000;
+export async function updateClaimStatus(claimId, status, supersededBy) {
+    const response = await fetch(`${GRAPHITI_URL}/claims/${claimId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            status,
+            superseded_by: supersededBy,
+            updated_at: new Date().toISOString(),
+        }),
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to update claim ${claimId}: ${response.status}`);
+    }
+}
+export async function markClaimsSuperseded(oldClaimIds, newClaimId) {
+    for (const claimId of oldClaimIds) {
+        await updateClaimStatus(claimId, 'superseded', newClaimId);
+    }
+}
 export async function ingestClaims(claims, groupId) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -19,7 +38,7 @@ export async function ingestClaims(claims, groupId) {
         clearTimeout(timeout);
     }
 }
-export async function searchClaims(query, groupId, options = {}) {
+export async function searchClaims(query, groupId, options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1000); // 1s timeout for assemble
     try {
@@ -29,8 +48,9 @@ export async function searchClaims(query, groupId, options = {}) {
             body: JSON.stringify({
                 query,
                 group_id: groupId,
-                status: options.status || ['active'],
-                limit: options.limit || 20,
+                statuses: options?.statuses || ['active'],
+                limit: options?.limit || 20,
+                min_confidence: options?.minConfidence,
             }),
             signal: controller.signal,
         });

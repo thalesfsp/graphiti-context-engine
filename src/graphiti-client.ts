@@ -1,7 +1,36 @@
-import { Claim } from './types.js';
+import { Claim, ClaimStatus } from './types.js';
 
 const GRAPHITI_URL = process.env.GRAPHITI_URL || 'http://localhost:8721';
 const TIMEOUT_MS = 5000;
+
+export async function updateClaimStatus(
+  claimId: string, 
+  status: ClaimStatus,
+  supersededBy?: string
+): Promise<void> {
+  const response = await fetch(`${GRAPHITI_URL}/claims/${claimId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      status,
+      superseded_by: supersededBy,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Failed to update claim ${claimId}: ${response.status}`);
+  }
+}
+
+export async function markClaimsSuperseded(
+  oldClaimIds: string[],
+  newClaimId: string
+): Promise<void> {
+  for (const claimId of oldClaimIds) {
+    await updateClaimStatus(claimId, 'superseded', newClaimId);
+  }
+}
 
 export async function ingestClaims(claims: Claim[], groupId: string): Promise<{ ingested: number; duplicates: number }> {
   const controller = new AbortController();
@@ -28,7 +57,11 @@ export async function ingestClaims(claims: Claim[], groupId: string): Promise<{ 
 export async function searchClaims(
   query: string,
   groupId: string,
-  options: { status?: string[]; limit?: number } = {}
+  options?: { 
+    limit?: number; 
+    minConfidence?: number;
+    statuses?: ClaimStatus[];  // Default: ['active']
+  }
 ): Promise<Claim[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1000); // 1s timeout for assemble
@@ -40,8 +73,9 @@ export async function searchClaims(
       body: JSON.stringify({
         query,
         group_id: groupId,
-        status: options.status || ['active'],
-        limit: options.limit || 20,
+        statuses: options?.statuses || ['active'],
+        limit: options?.limit || 20,
+        min_confidence: options?.minConfidence,
       }),
       signal: controller.signal,
     });
@@ -84,7 +118,11 @@ export async function ingestClaimsWithRetry(claims: Claim[], groupId: string): P
   return cbResult.result;
 }
 
-export async function searchClaimsWithFallback(query: string, groupId: string, options?: any): Promise<Claim[]> {
+export async function searchClaimsWithFallback(query: string, groupId: string, options?: { 
+    limit?: number; 
+    minConfidence?: number;
+    statuses?: ClaimStatus[];  
+  }): Promise<Claim[]> {
   const cbResult = await graphitiCircuit.call(
     () => searchClaims(query, groupId, options),
     []

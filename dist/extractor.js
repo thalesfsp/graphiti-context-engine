@@ -1,4 +1,9 @@
 const EXTRACTOR_VERSION = 'v1.0';
+// Stub for now
+export async function detectSupersession(_newClaim, _existingClaims) {
+    // TODO: LLM-based contradiction detection
+    return { supersedes: [] };
+}
 export async function extractClaims(_text, _sessionId, _messageId, _authorId) {
     // For now, use a simple prompt-based extraction
     // In production, this would call OpenClaw's LLM

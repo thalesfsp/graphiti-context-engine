@@ -107,7 +107,7 @@ export class GraphitiContextEngine {
             const groupId = this.getGroupIdForSession(sessionId);
             // Search Graphiti (with 1s timeout)
             const claims = await searchClaims(query, groupId, {
-                status: ['active'],
+                statuses: ['active'],
                 limit: 20,
             });
             // Build context addition

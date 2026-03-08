@@ -1,3 +1,15 @@
+export type ClaimStatus = 'active' | 'superseded' | 'archived' | 'retracted';
+export interface ClaimUpdate {
+    status?: ClaimStatus;
+    superseded_by?: string;
+    updated_at: string;
+}
+export interface PartialClaim {
+    subject: string;
+    predicate: string;
+    object: string;
+    confidence: number;
+}
 export interface Claim {
     claim_id: string;
     subject: string;
@@ -5,7 +17,7 @@ export interface Claim {
     object: string;
     qualifiers?: Record<string, string>;
     confidence: number;
-    status: "active" | "superseded" | "disputed";
+    status: ClaimStatus;
     source_message_id: string;
     source_session_id: string;
     source_author_id?: string;

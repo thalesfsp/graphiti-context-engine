@@ -1,3 +1,18 @@
+export type ClaimStatus = 'active' | 'superseded' | 'archived' | 'retracted';
+
+export interface ClaimUpdate {
+  status?: ClaimStatus;
+  superseded_by?: string; // claim_id of newer claim
+  updated_at: string;
+}
+
+export interface PartialClaim {
+  subject: string;
+  predicate: string;
+  object: string;
+  confidence: number;
+}
+
 export interface Claim {
   claim_id: string; // UUID
   subject: string; // Entity name (e.g., "Greice")
@@ -5,7 +20,7 @@ export interface Claim {
   object: string; // Value (e.g., "March 15", "T")
   qualifiers?: Record<string, string>; // Optional metadata (e.g., {"also_known_as": "Grace"})
   confidence: number; // 0.0-1.0
-  status: "active" | "superseded" | "disputed";
+  status: ClaimStatus;
   source_message_id: string; // OpenClaw message ID
   source_session_id: string; // OpenClaw session ID
   source_author_id?: string; // OpenClaw user/author ID

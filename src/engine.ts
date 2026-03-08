@@ -179,7 +179,7 @@ export class GraphitiContextEngine {
       
       // Search Graphiti (with 1s timeout)
       const claims = await searchClaims(query, groupId, {
-        status: ['active'],
+        statuses: ['active'],
         limit: 20,
       });
       
