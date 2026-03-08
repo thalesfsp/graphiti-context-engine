@@ -1,4 +1,8 @@
 class MessageQueue {
+    reset() {
+        this.queue = [];
+        this.seen.clear();
+    }
     queue = [];
     seen = new Set();
     enqueue(item) {
@@ -11,6 +15,7 @@ class MessageQueue {
     }
     drain() {
         const items = [...this.queue];
+        this.seen.clear();
         this.queue = [];
         return items;
     }

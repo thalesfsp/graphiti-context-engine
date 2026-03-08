@@ -1,4 +1,4 @@
-declare class CircuitBreaker {
+export declare class CircuitBreaker {
     private state;
     call<T>(fn: () => Promise<T>, fallback: T): Promise<{
         result: T;
@@ -7,5 +7,4 @@ declare class CircuitBreaker {
     isHealthy(): boolean;
 }
 export declare const graphitiCircuit: CircuitBreaker;
-export {};
 //# sourceMappingURL=circuit-breaker.d.ts.map

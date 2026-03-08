@@ -44,12 +44,12 @@ export declare class GraphitiContextEngine {
     private extractMessageId;
     afterTurn(params: {
         sessionId: string;
-        sessionFile: string;
+        _sessionFile: string;
         messages: AgentMessage[];
         prePromptMessageCount: number;
         autoCompactionSummary?: string;
         isHeartbeat?: boolean;
-        tokenBudget?: number;
+        _tokenBudget?: number;
     }): Promise<void>;
     private extractTextContent;
     private getGroupIdForSession;
@@ -57,13 +57,13 @@ export declare class GraphitiContextEngine {
     assemble(params: {
         sessionId: string;
         messages: AgentMessage[];
-        tokenBudget?: number;
+        _tokenBudget?: number;
     }): Promise<AssembleResult>;
     compact(params: {
         sessionId: string;
-        sessionFile: string;
-        tokenBudget?: number;
-        force?: boolean;
+        _sessionFile: string;
+        _tokenBudget?: number;
+        _force?: boolean;
         currentTokenCount?: number;
         compactionTarget?: 'budget' | 'threshold';
         customInstructions?: string;

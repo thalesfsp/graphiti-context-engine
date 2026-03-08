@@ -95,7 +95,7 @@ export class GraphitiContextEngine {
         }
     }
     async assemble(params) {
-        const { sessionId, messages, tokenBudget } = params;
+        const { sessionId, messages } = params;
         let systemPromptAddition = '';
         try {
             // Extract query from recent messages
@@ -126,7 +126,7 @@ export class GraphitiContextEngine {
         };
     }
     async compact(params) {
-        const { sessionId, sessionFile, force } = params;
+        const { sessionId } = params;
         try {
             await this.processQueuedMessages(sessionId);
             // 3. Mark session's recent claims as "archived" (optional - for tracking compacted content)

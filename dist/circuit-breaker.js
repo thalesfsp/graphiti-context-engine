@@ -1,6 +1,6 @@
 const FAILURE_THRESHOLD = 3;
 const RESET_TIMEOUT_MS = 30000; // 30 seconds
-class CircuitBreaker {
+export class CircuitBreaker {
     state = { failures: 0, lastFailure: 0, isOpen: false };
     async call(fn, fallback) {
         // Check if circuit should reset
@@ -11,7 +11,7 @@ class CircuitBreaker {
         // If circuit is open, return fallback immediately
         if (this.state.isOpen) {
             console.warn('Circuit breaker open, using fallback');
-            return fallback;
+            return { result: fallback, succeeded: false };
         }
         try {
             const result = await fn();
@@ -26,7 +26,7 @@ class CircuitBreaker {
                 this.state.isOpen = true;
                 console.error(`Circuit breaker opened after ${FAILURE_THRESHOLD} failures`);
             }
-            return fallback;
+            return { result: fallback, succeeded: false };
         }
     }
     isHealthy() {

@@ -9,6 +9,10 @@ interface QueuedMessage {
 }
 
 class MessageQueue {
+  reset(): void {
+    this.queue = [];
+    this.seen.clear();
+  }
   private queue: QueuedMessage[] = [];
   private seen: Set<string> = new Set();
 
@@ -23,6 +27,7 @@ class MessageQueue {
   
   drain(): QueuedMessage[] {
     const items = [...this.queue];
+    this.seen.clear();
     this.queue = [];
     return items;
   }

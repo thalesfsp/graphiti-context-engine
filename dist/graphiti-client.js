@@ -41,8 +41,9 @@ export async function searchClaims(query, groupId, options = {}) {
         return data.claims || [];
     }
     catch (error) {
-        if (error.name === 'AbortError') {
-            console.warn('Graphiti search timed out, returning empty claims');
+        const err = error;
+        if (err.name === 'AbortError') {
+            console.warn('Graphiti search timed out, returning empty claims', err);
         }
         return []; // Graceful degradation
     }

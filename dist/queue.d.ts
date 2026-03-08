@@ -7,6 +7,7 @@ interface QueuedMessage {
     isHeartbeat: boolean;
 }
 declare class MessageQueue {
+    reset(): void;
     private queue;
     private seen;
     enqueue(item: QueuedMessage): void;

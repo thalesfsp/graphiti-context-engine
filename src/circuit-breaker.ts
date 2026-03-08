@@ -7,7 +7,7 @@ interface CircuitState {
 const FAILURE_THRESHOLD = 3;
 const RESET_TIMEOUT_MS = 30000; // 30 seconds
 
-class CircuitBreaker {
+export class CircuitBreaker {
   private state: CircuitState = { failures: 0, lastFailure: 0, isOpen: false };
   
   async call<T>(fn: () => Promise<T>, fallback: T): Promise<{result: T; succeeded: boolean}> {

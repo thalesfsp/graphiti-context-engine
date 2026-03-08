@@ -19,7 +19,7 @@ export async function ingestClaims(claims: Claim[], groupId: string): Promise<{ 
       throw new Error(`Graphiti error: ${response.status}`);
     }
     
-    return await response.json();
+    return await response.json() as { ingested: number; duplicates: number };
   } finally {
     clearTimeout(timeout);
   }
@@ -50,11 +50,12 @@ export async function searchClaims(
       throw new Error(`Graphiti search error: ${response.status}`);
     }
     
-    const data = await response.json();
+    const data: any = await response.json();
     return data.claims || [];
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      console.warn('Graphiti search timed out, returning empty claims');
+  } catch (error: unknown) {
+    const err = error as Error;
+    if (err.name === 'AbortError') {
+      console.warn('Graphiti search timed out, returning empty claims', err);
     }
     return []; // Graceful degradation
   } finally {

@@ -94,12 +94,12 @@ export class GraphitiContextEngine {
 
   async afterTurn(params: {
     sessionId: string;
-    sessionFile: string;
+    _sessionFile: string;
     messages: AgentMessage[];
     prePromptMessageCount: number;
     autoCompactionSummary?: string;
     isHeartbeat?: boolean;
-    tokenBudget?: number;
+    _tokenBudget?: number;
   }): Promise<void> {
     const { sessionId, isHeartbeat } = params;
 
@@ -161,9 +161,9 @@ export class GraphitiContextEngine {
   async assemble(params: {
     sessionId: string;
     messages: AgentMessage[];
-    tokenBudget?: number;
+    _tokenBudget?: number;
   }): Promise<AssembleResult> {
-    const { sessionId, messages, tokenBudget } = params;
+    const { sessionId, messages } = params;
     
     let systemPromptAddition = '';
     
@@ -203,15 +203,15 @@ export class GraphitiContextEngine {
 
   async compact(params: {
     sessionId: string;
-    sessionFile: string;
-    tokenBudget?: number;
-    force?: boolean;
+    _sessionFile: string;
+    _tokenBudget?: number;
+    _force?: boolean;
     currentTokenCount?: number;
     compactionTarget?: 'budget' | 'threshold';
     customInstructions?: string;
     legacyParams?: Record<string, unknown>;
   }): Promise<CompactResult> {
-    const { sessionId, sessionFile, force } = params;
+    const { sessionId } = params;
     
     try {
       await this.processQueuedMessages(sessionId);
