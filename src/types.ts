@@ -35,3 +35,20 @@ export interface AgentMessage {
   content: string | unknown[];
   // Add other fields as needed
 }
+
+export interface SubagentScope {
+  parentSessionId: string;
+  subagentId: string;
+  groupId: string;  // Computed: `${parentSessionId}:${subagentId}`
+  startedAt: string;
+  status: 'active' | 'completed' | 'failed';
+}
+
+export interface SubagentSummary {
+  subagentId: string;
+  parentSessionId: string;
+  summary: string;  // LLM-generated summary of subagent work
+  claimCount: number;
+  startedAt: string;
+  completedAt: string;
+}

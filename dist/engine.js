@@ -5,6 +5,7 @@ import { extractClaims, buildClaimsForIngestion } from './extractor.js';
 import { ingestClaims as rawIngestClaims, ingestClaimsWithRetry, searchClaimsWithFallback as searchClaims, markSessionClaimsArchived } from './graphiti-client.js';
 import { retryQueue } from './retry-queue.js';
 import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
+import { completeSubagentScope, getGroupIdForSession } from './subagent-scope.js';
 export class GraphitiContextEngine {
     info = {
         id: "graphiti-context-engine",
@@ -67,11 +68,8 @@ export class GraphitiContextEngine {
         }
         return null;
     }
-    getGroupIdForSession(sessionId) {
-        // Extract group from session key (e.g., "agent:main:helix" -> "helix")
-        // Default to "default" if can't parse
-        const parts = sessionId.split(':');
-        return parts[2] || 'default';
+    getGroupIdForSession(sessionId, subagentId) {
+        return getGroupIdForSession(sessionId, subagentId);
     }
     async processQueuedMessages(sessionId) {
         const queued = messageQueue.drain();
@@ -148,6 +146,34 @@ export class GraphitiContextEngine {
             compacted: false, // We don't own compaction, legacy does
             reason: 'Claims extracted; delegating to legacy compaction',
         };
+    }
+    async onSubagentComplete(params) {
+        const { subagentId, parentSessionId, summary } = params;
+        // 1. Mark scope as complete
+        const completedScope = await completeSubagentScope(subagentId, summary || 'Subagent work completed');
+        if (!completedScope)
+            return;
+        // 2. Create summary claim in PARENT graph (not subagent graph)
+        const summaryClaim = {
+            claim_id: `summary:${subagentId}`,
+            subject: 'subagent',
+            predicate: 'completed_work',
+            object: completedScope.summary,
+            qualifiers: {
+                subagent_id: subagentId,
+                claim_count: String(completedScope.claimCount),
+            },
+            confidence: 1.0,
+            status: 'active',
+            source_message_id: `subagent:${subagentId}`,
+            source_session_id: parentSessionId,
+            extractor_version: 'subagent-summary-v1',
+            created_at: completedScope.completedAt,
+            updated_at: completedScope.completedAt,
+        };
+        // Ingest summary into parent's group
+        const parentGroupId = getGroupIdForSession(parentSessionId);
+        await ingestClaimsWithRetry([summaryClaim], parentGroupId);
     }
 }
 //# sourceMappingURL=engine.js.map

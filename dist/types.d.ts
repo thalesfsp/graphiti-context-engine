@@ -29,4 +29,19 @@ export interface AgentMessage {
     role: 'user' | 'assistant' | 'system' | 'tool';
     content: string | unknown[];
 }
+export interface SubagentScope {
+    parentSessionId: string;
+    subagentId: string;
+    groupId: string;
+    startedAt: string;
+    status: 'active' | 'completed' | 'failed';
+}
+export interface SubagentSummary {
+    subagentId: string;
+    parentSessionId: string;
+    summary: string;
+    claimCount: number;
+    startedAt: string;
+    completedAt: string;
+}
 //# sourceMappingURL=types.d.ts.map

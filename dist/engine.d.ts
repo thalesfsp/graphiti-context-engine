@@ -69,5 +69,10 @@ export declare class GraphitiContextEngine {
         customInstructions?: string;
         legacyParams?: Record<string, unknown>;
     }): Promise<CompactResult>;
+    onSubagentComplete(params: {
+        subagentId: string;
+        parentSessionId: string;
+        summary?: string;
+    }): Promise<void>;
 }
 //# sourceMappingURL=engine.d.ts.map
