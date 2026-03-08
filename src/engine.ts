@@ -5,7 +5,7 @@ import { messageQueue } from './queue.js';
 import crypto from 'node:crypto';
 
 import { extractClaims, buildClaimsForIngestion } from './extractor.js';
-import { ingestClaims, searchClaims } from './graphiti-client.js';
+import { ingestClaims, searchClaims, markSessionClaimsArchived } from './graphiti-client.js';
 import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
 
 export interface ContextEngineInfo {
@@ -49,6 +49,7 @@ export class GraphitiContextEngine {
     id: "graphiti-context-engine",
     name: "Graphiti Context Engine",
     version: "0.1.0",
+    ownsCompaction: false, // Let legacy handle actual compaction
   };
 
   async bootstrap(_params: { sessionId: string; sessionFile: string }): Promise<BootstrapResult> {
@@ -101,46 +102,8 @@ export class GraphitiContextEngine {
   }): Promise<void> {
     const { sessionId, isHeartbeat } = params;
 
-    // Skip heartbeats
     if (isHeartbeat) return;
-
-    // Drain queued messages
-    const queued = messageQueue.drain();
-    if (queued.length === 0) return;
-
-    // Process each message
-    for (const item of queued) {
-      try {
-        // Extract text content
-        const text = this.extractTextContent(item.message);
-        if (!text) continue;
-
-        // Extract claims via LLM
-        const extraction = await extractClaims(
-          text,
-          item.sessionId,
-          item.messageId,
-          // TODO: get author ID from message metadata
-        );
-
-        if (extraction.claims.length === 0) continue;
-
-        // Build claims with provenance
-        const claims = buildClaimsForIngestion(
-          extraction,
-          item.sessionId,
-          item.messageId
-        );
-
-        // POST to Graphiti (with timeout/retry)
-        const groupId = this.getGroupIdForSession(sessionId);
-        await ingestClaims(claims, groupId);
-
-      } catch (error) {
-        // Log but don't fail - graceful degradation
-        console.error(`afterTurn extraction failed for ${item.messageId}:`, error);
-      }
-    }
+    await this.processQueuedMessages(sessionId);
   }
 
   private extractTextContent(message: AgentMessage): string | null {
@@ -162,6 +125,28 @@ export class GraphitiContextEngine {
     // Default to "default" if can't parse
     const parts = sessionId.split(':');
     return parts[2] || 'default';
+  }
+
+  private async processQueuedMessages(sessionId: string): Promise<void> {
+    const queued = messageQueue.drain();
+    if (queued.length === 0) return;
+
+    for (const item of queued) {
+      try {
+        const text = this.extractTextContent(item.message);
+        if (!text) continue;
+
+        const extraction = await extractClaims(text, item.sessionId, item.messageId);
+        if (extraction.claims.length === 0) continue;
+
+        const claims = buildClaimsForIngestion(extraction, item.sessionId, item.messageId);
+        const groupId = this.getGroupIdForSession(sessionId);
+        
+        await ingestClaims(claims, groupId);
+      } catch (error) {
+        console.error(`Claim extraction failed for ${item.messageId}:`, error);
+      }
+    }
   }
 
   async assemble(params: {
@@ -213,10 +198,33 @@ export class GraphitiContextEngine {
     tokenBudget?: number;
     force?: boolean;
     currentTokenCount?: number;
-    compactionTarget?: "budget" | "threshold";
+    compactionTarget?: 'budget' | 'threshold';
     customInstructions?: string;
+    legacyParams?: Record<string, unknown>;
   }): Promise<CompactResult> {
-    // Stub: no compaction
-    return { ok: true, compacted: false };
+    const { sessionId, sessionFile, force } = params;
+    
+    try {
+      await this.processQueuedMessages(sessionId);
+      
+      // 3. Mark session's recent claims as "archived" (optional - for tracking compacted content)
+      // This is a soft marker, claims remain queryable but with lower priority
+      try {
+        await markSessionClaimsArchived(sessionId);
+      } catch (error) {
+        console.warn('Failed to mark claims as archived:', error);
+      }
+      
+    } catch (error) {
+      console.error('compact() claim extraction phase failed:', error);
+    }
+    
+    // 4. Return success - actual compaction is handled by legacy engine
+    // We set ownsCompaction: false in engine info, so OpenClaw will run legacy compaction
+    return {
+      ok: true,
+      compacted: false, // We don't own compaction, legacy does
+      reason: 'Claims extracted; delegating to legacy compaction',
+    };
   }
 }

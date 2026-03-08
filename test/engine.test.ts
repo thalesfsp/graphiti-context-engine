@@ -56,4 +56,23 @@ describe('GraphitiContextEngine', () => {
     expect(mockExtractSpy).toHaveBeenCalled();
     expect(mockIngestSpy).not.toHaveBeenCalled(); // No claims expected from mock, but at least extraction called
   }, 10000);
+
+  it('compact() should extract claims from queued messages', async () => {
+    // Enqueue a message
+    const engine = new GraphitiContextEngine();
+    await engine.ingest({ sessionId: 'test', message: { role: 'user', content: 'Test message' } });
+    
+    // Run compact
+    const result = await engine.compact({ sessionId: 'test', sessionFile: '' });
+    
+    // Should succeed and drain queue
+    expect(result.ok).toBe(true);
+    expect(result.compacted).toBe(false);
+    expect(messageQueue.size()).toBe(0);
+  });
+
+  it('compact() should not own compaction (delegates to legacy)', () => {
+    const engine = new GraphitiContextEngine();
+    expect(engine.info.ownsCompaction).toBe(false);
+  });
 });

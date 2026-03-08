@@ -61,3 +61,10 @@ export async function searchClaims(
     clearTimeout(timeout);
   }
 }
+
+export async function markSessionClaimsArchived(sessionId: string): Promise<void> {
+  // This is optional - marks claims from this session as archived
+  // For now, skip this as the PATCH endpoint updates individual claims
+  // A bulk endpoint would be needed: POST /claims/archive-session
+  console.log(`Would mark claims for session ${sessionId} as archived`);
+}
