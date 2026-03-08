@@ -4,6 +4,9 @@ import type { AgentMessage } from './types.js';
 import { messageQueue } from './queue.js';
 import crypto from 'node:crypto';
 
+import { extractClaims, buildClaimsForIngestion } from './extractor.js';
+import { ingestClaims } from './graphiti-client.js';
+
 export interface ContextEngineInfo {
   id: string;
   name: string;
@@ -95,7 +98,69 @@ export class GraphitiContextEngine {
     isHeartbeat?: boolean;
     tokenBudget?: number;
   }): Promise<void> {
-    // No-op stub
+    const { sessionId, isHeartbeat } = params;
+
+    // Skip heartbeats
+    if (isHeartbeat) return;
+
+    // Drain queued messages
+    const queued = messageQueue.drain();
+    if (queued.length === 0) return;
+
+    // Process each message
+    for (const item of queued) {
+      try {
+        // Extract text content
+        const text = this.extractTextContent(item.message);
+        if (!text) continue;
+
+        // Extract claims via LLM
+        const extraction = await extractClaims(
+          text,
+          item.sessionId,
+          item.messageId,
+          // TODO: get author ID from message metadata
+        );
+
+        if (extraction.claims.length === 0) continue;
+
+        // Build claims with provenance
+        const claims = buildClaimsForIngestion(
+          extraction,
+          item.sessionId,
+          item.messageId
+        );
+
+        // POST to Graphiti (with timeout/retry)
+        const groupId = this.getGroupIdForSession(sessionId);
+        await ingestClaims(claims, groupId);
+
+      } catch (error) {
+        // Log but don't fail - graceful degradation
+        console.error(`afterTurn extraction failed for ${item.messageId}:`, error);
+      }
+    }
+  }
+
+  private extractTextContent(message: AgentMessage): string | null {
+    if (typeof message.content === 'string') {
+      return message.content;
+    }
+    // Handle array content (text blocks)
+    if (Array.isArray(message.content)) {
+      return message.content
+        .filter((b: any) => b.type === 'text')
+        .map((b: any) => b.text)
+        .join('\n');
+    }
+    return null;
+  }
+
+  private getGroupIdForSession(sessionId: string): string {
+    // Extract group from session key (e.g., "agent:main:helix" -> "helix")
+    // Default to "default" if can't parse
+    const parts = sessionId.split(':');
+    return parts[2] || 'default';
   }
 
   async assemble(params: {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { GraphitiContextEngine } from '../src/engine.js';
+import { messageQueue } from '../src/queue.js';
 
 describe('GraphitiContextEngine', () => {
   it('initializes without errors', () => {
@@ -27,5 +28,22 @@ describe('GraphitiContextEngine', () => {
     const result = await engine.compact({ sessionId: 'test', sessionFile: 'test.json' });
     expect(result.ok).toBe(true);
     expect(result.compacted).toBe(false);
+  });
+
+  it('afterTurn() should process queued messages', async () => {
+    // Enqueue a message
+    const engine = new GraphitiContextEngine();
+    await engine.ingest({ sessionId: 'test', message: { role: 'user', content: 'My name is John' } });
+
+    // Run afterTurn
+    await engine.afterTurn({ 
+      sessionId: 'test', 
+      sessionFile: '', 
+      messages: [], 
+      prePromptMessageCount: 0 
+    });
+
+    // Queue should be empty
+    expect(messageQueue.size()).toBe(0);
   });
 });
