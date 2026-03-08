@@ -5,7 +5,8 @@ import { messageQueue } from './queue.js';
 import crypto from 'node:crypto';
 
 import { extractClaims, buildClaimsForIngestion } from './extractor.js';
-import { ingestClaims } from './graphiti-client.js';
+import { ingestClaims, searchClaims } from './graphiti-client.js';
+import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
 
 export interface ContextEngineInfo {
   id: string;
@@ -168,10 +169,41 @@ export class GraphitiContextEngine {
     messages: AgentMessage[];
     tokenBudget?: number;
   }): Promise<AssembleResult> {
-    // Stub: return empty context
+    const { sessionId, messages, tokenBudget } = params;
+    
+    let systemPromptAddition = '';
+    
+    try {
+      // Extract query from recent messages
+      const query = extractQueryFromMessages(messages);
+      if (!query) {
+        return { messages, estimatedTokens: 0 };
+      }
+      
+      // Get group ID for this session
+      const groupId = this.getGroupIdForSession(sessionId);
+      
+      // Search Graphiti (with 1s timeout)
+      const claims = await searchClaims(query, groupId, {
+        status: ['active'],
+        limit: 20,
+      });
+      
+      // Build context addition
+      systemPromptAddition = buildContextAddition(claims);
+      
+    } catch (error) {
+      // Graceful degradation - just return messages without graph context
+      console.warn('assemble() failed to retrieve claims:', error);
+    }
+    
+    // Estimate tokens (rough: 4 chars per token)
+    const estimatedTokens = Math.ceil(systemPromptAddition.length / 4);
+    
     return {
-      messages: [],
-      estimatedTokens: 0,
+      messages,
+      estimatedTokens,
+      systemPromptAddition: systemPromptAddition || undefined,
     };
   }
 

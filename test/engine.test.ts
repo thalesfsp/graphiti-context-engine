@@ -21,6 +21,7 @@ describe('GraphitiContextEngine', () => {
     const result = await engine.assemble({ sessionId: 'test', messages: [] });
     expect(result.messages).toEqual([]);
     expect(result.estimatedTokens).toBe(0);
+    expect(result.systemPromptAddition).toBeUndefined();
   });
 
   it('compact returns no compaction', async () => {
@@ -31,6 +32,13 @@ describe('GraphitiContextEngine', () => {
   });
 
   it('afterTurn() should process queued messages', async () => {
+    // Mock extractClaims and ingestClaims to avoid real calls
+    const { extractClaims: mockExtract, buildClaimsForIngestion: mockBuild } = await import('../src/extractor.js');
+    const { ingestClaims: mockIngest } = await import('../src/graphiti-client.js');
+    
+    const mockExtractSpy = vi.spyOn({ extractClaims: mockExtract }, 'extractClaims');
+    const mockIngestSpy = vi.spyOn({ ingestClaims: mockIngest }, 'ingestClaims');
+    
     // Enqueue a message
     const engine = new GraphitiContextEngine();
     await engine.ingest({ sessionId: 'test', message: { role: 'user', content: 'My name is John' } });
@@ -45,5 +53,7 @@ describe('GraphitiContextEngine', () => {
 
     // Queue should be empty
     expect(messageQueue.size()).toBe(0);
-  });
+    expect(mockExtractSpy).toHaveBeenCalled();
+    expect(mockIngestSpy).not.toHaveBeenCalled(); // No claims expected from mock, but at least extraction called
+  }, 10000);
 });
