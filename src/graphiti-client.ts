@@ -56,10 +56,12 @@ export async function ingestClaims(claims: Claim[], groupId: string): Promise<{ 
 
 export async function searchClaims(
   query: string,
-  groupId: string,
+  groupIds: string | string[],
   options?: { 
     limit?: number; 
+    /** @deprecated Ignored by /search endpoint */
     minConfidence?: number;
+    /** @deprecated Ignored by /search endpoint */
     statuses?: ClaimStatus[];  // Default: ['active']
   }
 ): Promise<Claim[]> {
@@ -67,15 +69,14 @@ export async function searchClaims(
   const timeout = setTimeout(() => controller.abort(), 1000); // 1s timeout for assemble
   
   try {
-    const response = await fetch(`${GRAPHITI_URL}/claims/search`, {
+    const groups = Array.isArray(groupIds) ? groupIds : [groupIds];
+    const response = await fetch(`${GRAPHITI_URL}/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         query,
-        group_id: groupId,
-        statuses: options?.statuses || ['active'],
-        limit: options?.limit || 20,
-        min_confidence: options?.minConfidence,
+        group_ids: groups,
+        num_results: options?.limit || 20,
       }),
       signal: controller.signal,
     });
@@ -85,7 +86,23 @@ export async function searchClaims(
     }
     
     const data: any = await response.json();
-    return data.claims || [];
+    
+    // Transform Graphiti edges to engine Claims
+    const claims: Claim[] = (data.results || []).map((edge: any) => ({
+      claim_id: edge.uuid,
+      subject: edge.source_node_uuid, // fallback, actual name not strictly in edge format without joining
+      predicate: edge.name,
+      object: edge.fact || edge.target_node_uuid,
+      confidence: edge.score ?? 1.0,
+      status: 'active',
+      source_message_id: 'unknown',
+      source_session_id: 'unknown',
+      extractor_version: 'graphiti-search',
+      created_at: edge.created_at || new Date().toISOString(),
+      updated_at: edge.updated_at || new Date().toISOString(),
+    }));
+    
+    return claims;
   } catch (error: unknown) {
     const err = error as Error;
     if (err.name === 'AbortError') {
@@ -118,13 +135,13 @@ export async function ingestClaimsWithRetry(claims: Claim[], groupId: string): P
   return cbResult.result;
 }
 
-export async function searchClaimsWithFallback(query: string, groupId: string, options?: { 
+export async function searchClaimsWithFallback(query: string, groupIds: string | string[], options?: { 
     limit?: number; 
     minConfidence?: number;
     statuses?: ClaimStatus[];  
   }): Promise<Claim[]> {
   const cbResult = await graphitiCircuit.call(
-    () => searchClaims(query, groupId, options),
+    () => searchClaims(query, groupIds, options),
     []
   );
   return cbResult.result;

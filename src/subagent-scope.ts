@@ -3,6 +3,8 @@ import { SubagentScope, SubagentSummary } from './types.js';
 // Track active subagent scopes
 const activeScopes = new Map<string, SubagentScope>();
 
+export const DEFAULT_GROUPS = ['helix', 'ringboost', 'system', 'personal'];
+
 export function createSubagentScope(
   parentSessionId: string,
   subagentId: string
@@ -35,7 +37,11 @@ export function getGroupIdForSession(sessionId: string, subagentId?: string): st
     const parts = sessionId.split(':subagent:');
     if (parts.length === 2) {
       const parentPart = parts[0];  // e.g., "agent:main" or "agent:worker-grok"
-      const subagentUuid = parts[1]!; // The UUID
+      const subagentUuid = parts[1]; // The UUID
+      
+      if (!subagentUuid?.trim()) {
+        return 'default';
+      }
       
       // Check if we have an active scope for this subagent
       const scope = activeScopes.get(subagentUuid);
@@ -50,6 +56,20 @@ export function getGroupIdForSession(sessionId: string, subagentId?: string): st
   const parts = sessionId.split(':');
   // For "agent:main" -> "main", for "discord:123" -> "discord"
   return parts[1] || parts[0] || 'default';
+}
+
+export function getGroupIdsForSession(sessionId: string, subagentId?: string): string[] {
+  // For subagents, we only want their isolated graph
+  if (subagentId || isSubagentSession(sessionId)) {
+    return [getGroupIdForSession(sessionId, subagentId)];
+  }
+
+  const groupId = getGroupIdForSession(sessionId);
+  if (DEFAULT_GROUPS.includes(groupId)) {
+    return [groupId];
+  }
+  
+  return DEFAULT_GROUPS;
 }
 
 export async function completeSubagentScope(

@@ -8,7 +8,7 @@ import { extractClaims, buildClaimsForIngestion } from './extractor.js';
 import { ingestClaims as rawIngestClaims, ingestClaimsWithRetry, searchClaimsWithFallback as searchClaims, markSessionClaimsArchived } from './graphiti-client.js';
 import { retryQueue } from './retry-queue.js';
 import { extractQueryFromMessages, buildContextAddition } from './context-builder.js';
-import { completeSubagentScope, getGroupIdForSession } from './subagent-scope.js';
+import { completeSubagentScope, getGroupIdForSession, getGroupIdsForSession } from './subagent-scope.js';
 
 import type { EngineMetrics } from './metrics.js';
 import { recordIngest, recordExtraction, recordSearch, recordError, getMetrics, getSearchLatencyPercentiles } from './metrics.js';
@@ -158,7 +158,11 @@ export class GraphitiContextEngine {
     return getGroupIdForSession(sessionId, subagentId);
   }
 
-  private async processQueuedMessages(sessionId: string): Promise<void> {
+  private getGroupIdsForSession(sessionId: string, subagentId?: string): string[] {
+    return getGroupIdsForSession(sessionId, subagentId);
+  }
+
+  private async processQueuedMessages(_sessionId: string): Promise<void> {
     const queued = messageQueue.drain();
     if (queued.length === 0) return;
 
@@ -173,7 +177,7 @@ export class GraphitiContextEngine {
         recordExtraction(extraction.claims.length);
 
         const claims = buildClaimsForIngestion(extraction, item.sessionId, item.messageId);
-        const groupId = this.getGroupIdForSession(sessionId);
+        const groupId = this.getGroupIdForSession(item.sessionId);
         
         await ingestClaimsWithRetry(claims, groupId);
       } catch (error) {
@@ -199,12 +203,12 @@ export class GraphitiContextEngine {
         return { messages, estimatedTokens: 0 };
       }
       
-      // Get group ID for this session
-      const groupId = this.getGroupIdForSession(sessionId);
+      // Get group IDs for this session
+      const groupIds = this.getGroupIdsForSession(sessionId);
       
       // Search Graphiti (with 1s timeout)
       const start = Date.now();
-      const claims = await searchClaims(query, groupId, {
+      const claims = await searchClaims(query, groupIds, {
         statuses: ['active'],
         limit: 20,
       });
