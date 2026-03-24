@@ -45,7 +45,12 @@ async function graphitiFetch(
 // Plugin Registration
 // ============================================================================
 
-export default function register(api: OpenClawPluginApi) {
+const graphitiPlugin = {
+  id: "graphiti-context-engine",
+  name: "Graphiti Context Engine",
+  description: "Persistent knowledge graph memory using Graphiti + Neo4j",
+  
+  register(api: OpenClawPluginApi) {
   try {
     // ── Context Engine ──────────────────────────────────────────────────────
     api.registerContextEngine("graphiti-context-engine", () => {
@@ -180,7 +185,7 @@ export default function register(api: OpenClawPluginApi) {
           "Store a fact directly in the Graphiti knowledge graph. Use for important decisions, facts, or project knowledge worth persisting long-term.",
         parameters: Type.Object({
           fact: Type.String({ description: "The fact to store" }),
-          group: Type.String({
+          group_id: Type.String({
             description: "Group: helix, ringboost, personal, or system",
           }),
           source: Type.Optional(
@@ -188,9 +193,9 @@ export default function register(api: OpenClawPluginApi) {
           ),
         }),
         async execute(_toolCallId, params) {
-          const { fact, group, source = "nova" } = params as {
+          const { fact, group_id, source = "nova" } = params as {
             fact: string;
-            group: string;
+            group_id: string;
             source?: string;
           };
 
@@ -198,7 +203,7 @@ export default function register(api: OpenClawPluginApi) {
             const res = await graphitiFetch("/store", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ fact, group, source }),
+              body: JSON.stringify({ fact, group_id, source }),
             });
 
             if (!res.ok) {
@@ -212,13 +217,13 @@ export default function register(api: OpenClawPluginApi) {
               content: [
                 {
                   type: "text",
-                  text: `Stored in Graphiti (group: ${group}). Episode ID: ${data.episode_id || "unknown"}`,
+                  text: `Stored in Graphiti (group: ${group_id}). Episode ID: ${data.episode_id || "unknown"}`,
                 },
               ],
               details: {
                 action: "stored",
                 episode_id: data.episode_id,
-                group,
+                group_id,
                 source,
               },
             };
@@ -300,4 +305,7 @@ export default function register(api: OpenClawPluginApi) {
     console.error("[graphiti-context-engine] Registration FAILED:", e.message);
     console.error("[graphiti-context-engine] Stack:", e.stack);
   }
-}
+  },
+};
+
+export default graphitiPlugin;
