@@ -1,0 +1,44 @@
+{
+  "name": "@thalesfsp/graphiti-context-engine",
+  "version": "1.0.0",
+  "description": "Graphiti knowledge graph context engine for OpenClaw",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "dev": "vitest",
+    "preview": "vitest --ui"
+  },
+  "keywords": [
+    "openclaw",
+    "graphiti",
+    "knowledge-graph",
+    "neo4j",
+    "context-engine"
+  ],
+  "author": "Thales Pinheiro",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thalesfsp/graphiti-context-engine.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "typescript": "^5.9.3",
+    "vitest": "^2.0.4"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.48"
+  }
+}
