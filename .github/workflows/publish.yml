@@ -31,8 +31,8 @@ jobs:
     - name: Build
       run: npm run build
 
-    - name: Run tests
-      run: npm test
+    - name: Run unit tests
+      run: npm run test:unit
 
   publish-npm:
     name: Publish to NPM
