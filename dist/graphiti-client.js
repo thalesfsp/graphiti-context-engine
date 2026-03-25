@@ -38,19 +38,18 @@ export async function ingestClaims(claims, groupId) {
         clearTimeout(timeout);
     }
 }
-export async function searchClaims(query, groupId, options) {
+export async function searchClaims(query, groupIds, options) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1000); // 1s timeout for assemble
     try {
-        const response = await fetch(`${GRAPHITI_URL}/claims/search`, {
+        const groups = Array.isArray(groupIds) ? groupIds : [groupIds];
+        const response = await fetch(`${GRAPHITI_URL}/search`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 query,
-                group_id: groupId,
-                statuses: options?.statuses || ['active'],
-                limit: options?.limit || 20,
-                min_confidence: options?.minConfidence,
+                group_ids: groups,
+                num_results: options?.limit || 20,
             }),
             signal: controller.signal,
         });
@@ -58,7 +57,21 @@ export async function searchClaims(query, groupId, options) {
             throw new Error(`Graphiti search error: ${response.status}`);
         }
         const data = await response.json();
-        return data.claims || [];
+        // Transform Graphiti edges to engine Claims
+        const claims = (data.results || []).map((edge) => ({
+            claim_id: edge.uuid,
+            subject: edge.source_node_uuid, // fallback, actual name not strictly in edge format without joining
+            predicate: edge.name,
+            object: edge.fact || edge.target_node_uuid,
+            confidence: edge.score ?? 1.0,
+            status: 'active',
+            source_message_id: 'unknown',
+            source_session_id: 'unknown',
+            extractor_version: 'graphiti-search',
+            created_at: edge.created_at || new Date().toISOString(),
+            updated_at: edge.updated_at || new Date().toISOString(),
+        }));
+        return claims;
     }
     catch (error) {
         const err = error;
@@ -86,8 +99,8 @@ export async function ingestClaimsWithRetry(claims, groupId) {
     }
     return cbResult.result;
 }
-export async function searchClaimsWithFallback(query, groupId, options) {
-    const cbResult = await graphitiCircuit.call(() => searchClaims(query, groupId, options), []);
+export async function searchClaimsWithFallback(query, groupIds, options) {
+    const cbResult = await graphitiCircuit.call(() => searchClaims(query, groupIds, options), []);
     return cbResult.result;
 }
 export async function checkHealth() {

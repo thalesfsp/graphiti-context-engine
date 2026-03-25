@@ -2,6 +2,11 @@
   "id": "graphiti-context-engine",
   "name": "Graphiti Context Engine",
   "kind": "context-engine",
-  "version": "0.1.0",
-  "configSchema": {}
+  "version": "1.0.0",
+  "description": "OpenClaw Context Engine plugin for Graphiti knowledge graph integration",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
 }

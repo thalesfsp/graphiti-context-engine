@@ -5,9 +5,11 @@ export declare function ingestClaims(claims: Claim[], groupId: string): Promise<
     ingested: number;
     duplicates: number;
 }>;
-export declare function searchClaims(query: string, groupId: string, options?: {
+export declare function searchClaims(query: string, groupIds: string | string[], options?: {
     limit?: number;
+    /** @deprecated Ignored by /search endpoint */
     minConfidence?: number;
+    /** @deprecated Ignored by /search endpoint */
     statuses?: ClaimStatus[];
 }): Promise<Claim[]>;
 export declare function markSessionClaimsArchived(sessionId: string): Promise<void>;
@@ -15,7 +17,7 @@ export declare function ingestClaimsWithRetry(claims: Claim[], groupId: string):
     ingested: number;
     duplicates: number;
 }>;
-export declare function searchClaimsWithFallback(query: string, groupId: string, options?: {
+export declare function searchClaimsWithFallback(query: string, groupIds: string | string[], options?: {
     limit?: number;
     minConfidence?: number;
     statuses?: ClaimStatus[];

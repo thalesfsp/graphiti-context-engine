@@ -1,5 +1,6 @@
 // Track active subagent scopes
 const activeScopes = new Map();
+export const DEFAULT_GROUPS = ['helix', 'ringboost', 'system', 'personal'];
 export function createSubagentScope(parentSessionId, subagentId) {
     const scope = {
         parentSessionId,
@@ -28,6 +29,9 @@ export function getGroupIdForSession(sessionId, subagentId) {
         if (parts.length === 2) {
             const parentPart = parts[0]; // e.g., "agent:main" or "agent:worker-grok"
             const subagentUuid = parts[1]; // The UUID
+            if (!subagentUuid?.trim()) {
+                return 'default';
+            }
             // Check if we have an active scope for this subagent
             const scope = activeScopes.get(subagentUuid);
             if (scope)
@@ -40,6 +44,17 @@ export function getGroupIdForSession(sessionId, subagentId) {
     const parts = sessionId.split(':');
     // For "agent:main" -> "main", for "discord:123" -> "discord"
     return parts[1] || parts[0] || 'default';
+}
+export function getGroupIdsForSession(sessionId, subagentId) {
+    // For subagents, we only want their isolated graph
+    if (subagentId || isSubagentSession(sessionId)) {
+        return [getGroupIdForSession(sessionId, subagentId)];
+    }
+    const groupId = getGroupIdForSession(sessionId);
+    if (DEFAULT_GROUPS.includes(groupId)) {
+        return [groupId];
+    }
+    return DEFAULT_GROUPS;
 }
 export async function completeSubagentScope(subagentId, summary) {
     const scope = activeScopes.get(subagentId);

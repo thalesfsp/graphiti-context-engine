@@ -1,8 +1,10 @@
 import { 
   createSubagentScope, 
   getGroupIdForSession, 
+  getGroupIdsForSession,
   isSubagentSession, 
-  completeSubagentScope 
+  completeSubagentScope,
+  DEFAULT_GROUPS
 } from '../src/subagent-scope.js';
 
 describe('Subagent Scoped Graphs', () => {
@@ -29,7 +31,6 @@ describe('Subagent Scoped Graphs', () => {
     expect(summary?.summary).toBe('Did some work');
     expect(summary?.status).toBeUndefined(); // Not in SubagentSummary
   });
-});
 
   it('should auto-detect subagent from sessionId pattern', () => {
     // No explicit subagentId, but sessionId contains :subagent:
@@ -37,7 +38,30 @@ describe('Subagent Scoped Graphs', () => {
     expect(groupId).toBe('agent:worker-grok:abc123-def456');
   });
 
-  it('should return main groupId for non-subagent sessions', () => {
+  it('should return main groupId for non-subagent sessions in getGroupIdForSession', () => {
     const groupId = getGroupIdForSession('agent:main');
     expect(groupId).toBe('main');
   });
+
+  describe('getGroupIdsForSession', () => {
+    it('should return subagent isolated group', () => {
+      const groupIds = getGroupIdsForSession('agent:worker-grok:subagent:abc123');
+      expect(groupIds).toEqual(['agent:worker-grok:abc123']);
+    });
+
+    it('should return known group if session maps to one', () => {
+      const groupIds = getGroupIdsForSession('discord:helix');
+      expect(groupIds).toEqual(['helix']);
+    });
+
+    it('should fall back to default groups for unknown sessions like random discord channels', () => {
+      const groupIds = getGroupIdsForSession('discord:1234567890');
+      expect(groupIds).toEqual(DEFAULT_GROUPS);
+    });
+
+    it('should return default groups for default agent', () => {
+      const groupIds = getGroupIdsForSession('agent:default');
+      expect(groupIds).toEqual(DEFAULT_GROUPS);
+    });
+  });
+});

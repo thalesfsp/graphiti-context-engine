@@ -62,6 +62,7 @@ export declare class GraphitiContextEngine {
     }): Promise<void>;
     private extractTextContent;
     private getGroupIdForSession;
+    private getGroupIdsForSession;
     private processQueuedMessages;
     assemble(params: {
         sessionId: string;

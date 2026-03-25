@@ -16,6 +16,7 @@ export {
   createSubagentScope,
   getSubagentScope,
   getGroupIdForSession,
+  getGroupIdsForSession,
   completeSubagentScope,
   isSubagentSession,
 } from './subagent-scope.js';

@@ -41,22 +41,23 @@ describe('Claim Status Lifecycle', () => {
     );
   });
 
-  it('should filter by status in search', async () => {
-    const mockClaims = [{ claim_id: 'c1', status: 'active' }];
+  it('should search using edge nodes endpoint and map to claims', async () => {
+    const mockEdges = [{ uuid: 'c1', fact: 'test fact', name: 'TEST_PREDICATE', source_node_uuid: 'src', target_node_uuid: 'tgt' }];
     (global.fetch as any).mockResolvedValue({
       ok: true,
-      json: vi.fn().mockResolvedValue({ claims: mockClaims }),
+      json: vi.fn().mockResolvedValue({ results: mockEdges }),
     });
 
     const result = await searchClaims('test query', 'group-1');
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/claims/search'),
+      expect.stringContaining('/search'),
       expect.objectContaining({
         method: 'POST',
-        body: expect.stringContaining('"statuses":["active"]'),
+        body: expect.stringContaining('"group_ids":["group-1"]'),
       })
     );
-    expect(result).toEqual(mockClaims);
+    expect(result[0]?.claim_id).toBe('c1');
+    expect(result[0]?.predicate).toBe('TEST_PREDICATE');
   });
 });
