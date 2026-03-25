@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Run unit tests
+        run: npm test -- --reporter=verbose --testTimeout=30000
+        env:
+          # E2E tests are skipped in CI (require local Graphiti server)
+          CI: true
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+      
+      - name: Publish to npm (if version changed)
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          NPM_VERSION=$(npm view @thalesfsp/graphiti-context-engine version 2>/dev/null || echo "0.0.0")
+          if [ "$CURRENT_VERSION" != "$NPM_VERSION" ]; then
+            npm publish --provenance --access public
+          else
+            echo "Version $CURRENT_VERSION already published, skipping."
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
