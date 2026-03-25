@@ -5,19 +5,41 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thalesfsp/graphiti-context-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thalesfsp/graphiti-context-engine/issues"
+  },
+  "homepage": "https://github.com/thalesfsp/graphiti-context-engine#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "dev": "vitest",
-    "preview": "vitest --ui"
+    "preview": "vitest --ui",
+    "prepublishOnly": "npm run build && npm test"
   },
   "keywords": [
     "openclaw",
     "context-engine",
     "graphiti",
-    "knowledge-graph"
+    "knowledge-graph",
+    "neo4j",
+    "memory",
+    "ai",
+    "llm"
   ],
-  "author": "Thales FSP",
+  "author": "Thales FSP <thalesfsp@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.5.0",
