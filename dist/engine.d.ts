@@ -63,6 +63,8 @@ export declare class GraphitiContextEngine {
     private extractTextContent;
     private getGroupIdForSession;
     private getGroupIdsForSession;
+    drainQueuedMessagesForBackground(): Promise<void>;
+    private processRetryQueue;
     private processQueuedMessages;
     assemble(params: {
         sessionId: string;

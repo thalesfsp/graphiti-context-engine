@@ -9,6 +9,46 @@ import { completeSubagentScope, getGroupIdForSession, getGroupIdsForSession } fr
 import { recordIngest, recordExtraction, recordSearch, recordError, getMetrics, getSearchLatencyPercentiles } from './metrics.js';
 import { checkHealth } from './graphiti-client.js';
 import { graphitiCircuit } from './circuit-breaker.js';
+let backgroundDrainScheduled = false;
+let backgroundDrainInFlight = false;
+let backgroundDrainPromise = null;
+function scheduleBackgroundDrain(engine) {
+    if (backgroundDrainScheduled || backgroundDrainInFlight)
+        return;
+    backgroundDrainScheduled = true;
+    setTimeout(() => {
+        backgroundDrainScheduled = false;
+        backgroundDrainPromise = runBackgroundDrain(engine);
+        void backgroundDrainPromise;
+    }, 0);
+}
+async function runBackgroundDrain(engine) {
+    if (backgroundDrainInFlight)
+        return backgroundDrainPromise ?? Promise.resolve();
+    backgroundDrainInFlight = true;
+    try {
+        await engine.drainQueuedMessagesForBackground();
+    }
+    catch (error) {
+        recordError(`Background drain failed: ${error instanceof Error ? error.message : String(error)}`);
+        console.error('Background drain failed:', error);
+    }
+    finally {
+        backgroundDrainInFlight = false;
+        backgroundDrainPromise = null;
+        if (messageQueue.size() > 0) {
+            scheduleBackgroundDrain(engine);
+        }
+    }
+}
+async function waitForBackgroundDrain() {
+    if (backgroundDrainScheduled && !backgroundDrainPromise) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    if (backgroundDrainPromise) {
+        await backgroundDrainPromise;
+    }
+}
 export class GraphitiContextEngine {
     info = {
         id: 'graphiti-context-engine',
@@ -55,18 +95,10 @@ export class GraphitiContextEngine {
         return crypto.randomUUID();
     }
     async afterTurn(params) {
-        const { sessionId, isHeartbeat } = params;
+        const { isHeartbeat } = params;
         if (isHeartbeat)
             return;
-        // Process retries first
-        try {
-            await retryQueue.processRetries((claims, groupId) => rawIngestClaims(claims, groupId));
-        }
-        catch (error) {
-            recordError(`Retry queue process failed: ${error instanceof Error ? error.message : String(error)}`);
-            console.error('Failed to process retry queue:', error);
-        }
-        await this.processQueuedMessages(sessionId);
+        scheduleBackgroundDrain(this);
     }
     extractTextContent(message) {
         if (typeof message.content === 'string') {
@@ -87,7 +119,20 @@ export class GraphitiContextEngine {
     getGroupIdsForSession(sessionId, subagentId) {
         return getGroupIdsForSession(sessionId, subagentId);
     }
-    async processQueuedMessages(_sessionId) {
+    async drainQueuedMessagesForBackground() {
+        await this.processRetryQueue();
+        await this.processQueuedMessages();
+    }
+    async processRetryQueue() {
+        try {
+            await retryQueue.processRetries((claims, groupId) => rawIngestClaims(claims, groupId));
+        }
+        catch (error) {
+            recordError(`Retry queue process failed: ${error instanceof Error ? error.message : String(error)}`);
+            console.error('Failed to process retry queue:', error);
+        }
+    }
+    async processQueuedMessages() {
         const queued = messageQueue.drain();
         if (queued.length === 0)
             return;
@@ -147,7 +192,8 @@ export class GraphitiContextEngine {
     async compact(params) {
         const { sessionId } = params;
         try {
-            await this.processQueuedMessages(sessionId);
+            await waitForBackgroundDrain();
+            await this.drainQueuedMessagesForBackground();
             // 3. Mark session's recent claims as "archived" (optional - for tracking compacted content)
             // This is a soft marker, claims remain queryable but with lower priority
             try {

@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.1] - 2026-05-07
+
+### Changed
+- Make `afterTurn()` schedule Graphiti claim extraction/ingestion in the background instead of awaiting it on the reply path.
+- Keep heartbeat turns from scheduling background ingestion.
+- Keep `compact()` safe by waiting for any scheduled background drain before synchronously draining queued messages.
+
+### Tests
+- Updated engine/integration tests to assert `afterTurn()` returns quickly and queued messages drain asynchronously.
+
 ## [1.0.0] - 2026-03-08
 
 ### Added

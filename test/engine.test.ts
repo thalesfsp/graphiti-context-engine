@@ -2,6 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { GraphitiContextEngine } from '../src/engine.js';
 import { messageQueue } from '../src/queue.js';
 
+async function waitUntil(predicate: () => boolean, timeoutMs = 100): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  throw new Error('Timed out waiting for condition');
+}
+
 describe('GraphitiContextEngine', () => {
   it('initializes without errors', () => {
     const engine = new GraphitiContextEngine();
@@ -31,20 +40,21 @@ describe('GraphitiContextEngine', () => {
     expect(result.compacted).toBe(false);
   });
 
-  it('afterTurn() should process queued messages', async () => {
-    // Enqueue a message
+  it('afterTurn() should schedule queued message processing without blocking', async () => {
     const engine = new GraphitiContextEngine();
     await engine.ingest({ sessionId: 'test', message: { role: 'user', content: 'My name is John' } });
 
-    // Run afterTurn
-    await engine.afterTurn({ 
-      sessionId: 'test', 
-      sessionFile: '', 
-      messages: [], 
-      prePromptMessageCount: 0 
+    const start = Date.now();
+    await engine.afterTurn({
+      sessionId: 'test',
+      sessionFile: '',
+      messages: [],
+      prePromptMessageCount: 0,
     });
+    const elapsed = Date.now() - start;
 
-    // Queue should be empty (processing attempted, stub returns empty claims)
+    expect(elapsed).toBeLessThan(10);
+    await waitUntil(() => messageQueue.size() === 0);
     expect(messageQueue.size()).toBe(0);
   });
 

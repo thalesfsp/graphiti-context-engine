@@ -2,6 +2,15 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { GraphitiContextEngine } from '../src/engine.js';
 import { messageQueue } from '../src/queue.js';
 
+async function waitUntil(predicate: () => boolean, timeoutMs = 100): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  throw new Error('Timed out waiting for condition');
+}
+
 describe('Integration: Full Pipeline', () => {
   let engine: GraphitiContextEngine;
 
@@ -20,13 +29,17 @@ describe('Integration: Full Pipeline', () => {
     expect(ingestResult.ingested).toBe(true);
     expect(messageQueue.size()).toBe(1);
 
-    // 2. Run afterTurn (processes queue)
+    // 2. Run afterTurn (schedules queue processing without blocking)
+    const start = Date.now();
     await engine.afterTurn({
       sessionId: 'test-session',
       sessionFile: '',
       messages: [],
       prePromptMessageCount: 0,
     });
+    expect(Date.now() - start).toBeLessThan(10);
+
+    await waitUntil(() => messageQueue.size() === 0);
     expect(messageQueue.size()).toBe(0);
 
     // 3. Assemble (retrieves context)
@@ -82,6 +95,8 @@ describe('Integration: Full Pipeline', () => {
       prePromptMessageCount: 0,
       isHeartbeat: true,
     });
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
 
     // afterTurn skips processing for heartbeats, queue remains
     expect(messageQueue.size()).toBe(1);
